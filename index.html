@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Magnavox Odyssey 1972 Emulator</title>
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      font-family: "Courier New", monospace;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    #odyssey-screen {
+      width: 640px;
+      height: 400px;
+      margin: 40px auto;
+      background-color: #0a0a0a;
+      border: 6px solid #fff;
+      position: relative;
+      box-shadow: 0 0 20px #fff inset;
+      overflow: hidden;
+    }
+
+    /* Scanlines for retro CRT effect */
+    #odyssey-screen::after {
+      content: '';
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255,255,255,0.05),
+        rgba(255,255,255,0.05) 2px,
+        transparent 2px,
+        transparent 4px
+      );
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+
+    .game-dot {
+      position: absolute;
+      width: 8px;    /* smaller ball for authenticity */
+      height: 8px;
+      border-radius: 50%;
+      background-color: red;
+    }
+
+    #controls {
+      margin-top: 20px;
+    }
+
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Magnavox Odyssey 1972 Emulator</h1>
+  <div id="odyssey-screen"></div>
+  <div id="controls">
+    <button onclick="startPong()">Start Pong</button>
+    <button onclick="resetGame()">Reset</button>
+  </div>
+
+  <script>
+    const screen = document.getElementById('odyssey-screen');
+    let pongInterval;
+    let ball = { x: 300, y: 200, dx: 2, dy: 2, el: null };
+    let paddleLeft = { y: 160, el: null };
+    let paddleRight = { y: 160, el: null };
+
+    function createElement(x, y, w, h, color, isBall=false) {
+      const el = document.createElement('div');
+      el.style.position = 'absolute';
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.width = w + 'px';
+      el.style.height = h + 'px';
+      el.style.backgroundColor = color;
+      if(isBall) el.style.borderRadius = '50%';
+      screen.appendChild(el);
+      return el;
+    }
+
+    function resetGame() {
+      clearInterval(pongInterval);
+      screen.innerHTML = '';
+      ball = { x: 300, y: 200, dx: 2, dy: 2, el: null };
+      paddleLeft = { y: 160, el: null };
+      paddleRight = { y: 160, el: null };
+    }
+
+    function startPong() {
+      resetGame();
+
+      // Create paddles (smaller for authentic look)
+      paddleLeft.el = createElement(20, paddleLeft.y, 6, 40, 'white');
+      paddleRight.el = createElement(614, paddleRight.y, 6, 40, 'white');
+
+      // Create ball
+      ball.el = createElement(ball.x, ball.y, 8, 8, 'red', true);
+
+      pongInterval = setInterval(() => {
+        // Move ball
+        ball.x += ball.dx;
+        ball.y += ball.dy;
+
+        // Ball collisions with top/bottom
+        if(ball.y <= 0 || ball.y >= 392) ball.dy *= -1;
+
+        // Ball collisions with paddles
+        if(
+          (ball.x <= 26 && ball.y + 8 >= paddleLeft.y && ball.y <= paddleLeft.y + 40) ||
+          (ball.x >= 606 && ball.y + 8 >= paddleRight.y && ball.y <= paddleRight.y + 40)
+        ) {
+          ball.dx *= -1;
+        }
+
+        // Ball goes off-screen → reset round
+        if(ball.x < 0 || ball.x > 632) {
+          resetGame();
+          startPong();
+        }
+
+        // Update ball position
+        ball.el.style.left = ball.x + 'px';
+        ball.el.style.top = ball.y + 'px';
+
+      }, 33); // ~30 FPS for retro feel
+
+      // Keyboard controls
+      document.onkeydown = function(e) {
+        const step = 20;
+        if(e.key === 'w' && paddleLeft.y > 0) paddleLeft.y -= step;
+        if(e.key === 's' && paddleLeft.y < 360) paddleLeft.y += step;
+        if(e.key === 'ArrowUp' && paddleRight.y > 0) paddleRight.y -= step;
+        if(e.key === 'ArrowDown' && paddleRight.y < 360) paddleRight.y += step;
+
+        paddleLeft.el.style.top = paddleLeft.y + 'px';
+        paddleRight.el.style.top = paddleRight.y + 'px';
+      }
+    }
+  </script>
+</body>
+</html>
